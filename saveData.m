@@ -3,7 +3,7 @@
 % consistency FFC is calculated on the same set of spike-LFP electrodes as
 % SFC and STA.
 
-function saveCoherenceData(monkeyName,expDate,protocolName,folderSourceString,removeEvokedResponse,tapers)
+function saveData(monkeyName,expDate,protocolName,folderSourceString,removeEvokedResponse,tapers)
 
 rfData = load([monkeyName 'MicroelectrodeRFData.mat']);
 
@@ -19,7 +19,7 @@ end
 
 function saveDataAllElectrodePairs(monkeyName,expDate,protocolName,folderSourceString,lfpElectrodes,spikeElectrodes,removeEvokedResponse,tapers)
 
-folderSave = 'coherenceData';
+folderSave = 'savedData';
 makeDirectory(folderSave);
 
 analysisPeriodList{1} = [-0.5 0];
