@@ -18,9 +18,6 @@ function [tortval, MImat] = tort_measure(ph_sig, amp_sig, avg, n_bins)
 %
 % avg - string, either 'y' or 'n', determines whether values are
 % averaged over trials or returned as a vector
-%
-% Author: Angela Onslow, May 2010
-
 
 
 % % n_bins = 18; % number of phase bins
@@ -48,15 +45,10 @@ parfor i=1:num_trials
     
     MI=(log(n_bins)-(-sum((MeanAmp/sum(MeanAmp)).*log((MeanAmp/sum(MeanAmp))))))/log(n_bins);
     MImat(i,1)=MI;
-
-
-
 end
 
 if strcmp(avg, 'y')
-    
    tortval=mean(MImat);
-    
 else
    tortval=MImat;
 end
