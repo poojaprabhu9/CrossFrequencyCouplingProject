@@ -66,23 +66,35 @@ analysisPeriodList{2} = [0.25 0.75];
 %%%%%%%%%%%%%%%% Coherence and Coupling across all pairs %%%%%%%%%%%%%%%%%%
 
 % File to save
-fileToSave = fullfile(folderSave,[monkeyName expDate protocolName '_removeMean' num2str(removeEvokedResponse) '_Tapers' num2str(tapers(1)) '_' num2str(tapers(2)) '_' modality '_d' electrodeDistanceVal '_' sVarName num2str(sPos) '_o' num2str(oPos) '_' methodVar '_' filterMethod '_NSur' num2str(nSurr) '_MP' num2str(useMPFlag) '.mat']);
+fileToSave = fullfile(folderSave,[monkeyName expDate protocolName '_removeMean' num2str(removeEvokedResponse) '_Tapers' num2str(tapers(1)) '_' num2str(tapers(2)) '_' modality '_d' electrodeDistanceVal '_' sVarName num2str(sPos) '_o' num2str(oPos) '_' methodVar '_' filterMethod '_nSur' num2str(nSurr) '_MP' num2str(useMPFlag) '.mat']);
 
 if exist(fileToSave,'file')
     disp([fileToSave ' exists']);
 else
     numElectrodes = length(spikeElectrodes);
 
+    ffc=[]; ffphi=[]; sfc=[]; sfphi=[]; staVals=[]; pacmat=[]; pval=[]; lfpElectrodesToUse=[];
     for i=1:numElectrodes
         spikeElectrode = spikeElectrodes(i);
         [electrodesToCombine,~] = getElectrodeDistance(lfpElectrodes,spikeElectrode,electrodeDistanceList);
         lfpElectrodesSet=lfpElectrodes(electrodesToCombine{1});
 
         disp([num2str(i) ' of ' num2str(numElectrodes) ': ' monkeyName expDate protocolName 'elec' num2str(spikeElectrode)]);
-        [ffc,ffphi,sfc,sfphi,ffcFreq,sfcFreq,staVals,xsSTA,pacmat,pval,freqVecPhase,freqVecAmp] = getDataSingleElectrode(monkeyName,expDate,protocolName,folderSourceString,spikeElectrode,lfpElectrodesSet,analysisPeriodList,removeEvokedResponse,tapers,sVarName,sPos,oPos,methodVar,filterMethod,nSurr,useMPFlag);
+        [ffcTMP,ffphiTMP,sfcTMP,sfphiTMP,ffcFreq,sfcFreq,staValsTMP,xsSTA,pacmatTMP,pvalTMP,freqVecPhase,freqVecAmp] = getDataSingleElectrode(monkeyName,expDate,protocolName,folderSourceString,spikeElectrode,lfpElectrodesSet,analysisPeriodList,removeEvokedResponse,tapers,sVarName,sPos,oPos,methodVar,filterMethod,nSurr,useMPFlag);
+        
+        % Concatenate
+        ffc = cat(1,ffc,ffcTMP);
+        ffphi = cat(1,ffphi,ffphiTMP);
+        sfc = cat(1,sfc,sfcTMP);
+        sfphi = cat(1,sfphi,sfphiTMP);
+        staVals = cat(1,staVals,staValsTMP);
+        pacmat = cat(1,pacmat,pacmatTMP);
+        pval = cat(1,pval,pvalTMP);
+        lfpElectrodesToUse = cat(2,lfpElectrodesToUse,lfpElectrodesSet);
     end
     % save data
-    save(fileToSave,'ffc','ffphi','sfc','sfphi','ffcFreq','sfcFreq','staVals','xsSTA','pacmat','pval','freqVecPhase','freqVecAmp','spikeElectrodes');
+    lfpElectrodes = lfpElectrodesToUse;
+    save(fileToSave,'ffc','ffphi','sfc','sfphi','ffcFreq','sfcFreq','staVals','xsSTA','pacmat','pval','freqVecPhase','freqVecAmp','spikeElectrodes','lfpElectrodes');
 end
 end
 
@@ -116,10 +128,10 @@ function [ffc,ffphi,sfc,sfphi,ffcFreq,sfcFreq,staVals,xsSTA,pacmat,pval,freqVecP
 % PAC analysis
 phaseFreqVec = 2:4:80; % Phase frequencies for PAC
 ampFreqVec = 2:10:200; % amplitude frequencies for PAC
-width = 3; %width of morlet wavelet
+width = 3; % width of morlet wavelet
 epochFrames = 0;
 phFiltOrder = 300;
-ampFiltOrder = 300; %values taken from Kramer and Eden, JNM, 2013.
+ampFiltOrder = 300; % values taken from Kramer and Eden, JNM, 2013.
 
 gridType='Microelectrode';
 % Get parameter combinations
@@ -169,7 +181,7 @@ numLFPElectrodes = length(lfpElectrodes);
 params.tapers   = tapers;
 params.pad      = -1;
 params.Fs       = Fs;
-params.fpass    = [0 200];
+params.fpass    = [0 250];
 params.trialave = 1;
 
 for i=1:numLFPElectrodes
@@ -196,7 +208,8 @@ for i=1:numLFPElectrodes
         [sfc(i,p,:),sfphi(i,p,:),~,~,~,sfcFreq]=coherencycpb(lfp',spkb,params);
 
         % Spike-triggered average
-        [staVals(i,p,:),~,xsSTA] = getSTA(spikeData(goodPos),analogData(goodPos,:),analysisPeriodList{p},timeVals,[-0.1 0.1],1);
+        [staTMP,~,xsSTA] = getSTA(spikeData(goodPos),analogData(goodPos,:),analysisPeriodList{p},timeVals,[-0.1 0.1],1);
+        staVals(i,p,:) = staTMP{1};
 
         % phase-amplitude coupling
         [pacmat(i,p,:,:), pval(i,p,:,:),freqVecPhase,freqVecAmp] = getPAC(lfpSpike',Fs,filterMethod,methodVar, ...

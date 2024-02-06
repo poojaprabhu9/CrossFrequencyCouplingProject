@@ -13,7 +13,7 @@ monkeyName = 'alpaH'; expDate = '210817'; protocolName = 'GRF_002';
 
 % Electrode choices
 modality = 'LFP'; %'LFP' or 'ECoG'
-electrodeDistanceVal = '400'; %'0' '400'
+electrodeDistanceVal = '0'; %'0' '400'
 
 % Signal processing choices
 removeEvokedResponse = 1; 
