@@ -1,13 +1,17 @@
-clear all; close all;
-addpath(genpath('E:\Monkey\MATLAB\Repositories\CommonPrograms-master'))
-addpath(genpath('E:\Monkey\MATLAB\Repositories\chronux_2_12'));
-folderSourceString = 'E:\Monkey\MATLAB\CrossFrequencyCouplingProject\';
+% Need to have the following folders in Matlab's path
+% CommonPrograms: https://github.com/supratimray/CommonPrograms
+% Chronux: http://chronux.org/
 
-%%%%%%%%%%%Choice of Parameters%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+folderSourceString = fileparts(pwd); % folder in which programs and data for this project are kept. This line works only if 'pwd' returns the programs folder. Otherwise, simply specify this string, e.g. 'E:\Monkey\MATLAB\CrossFrequencyCouplingProject\';
+
+%%%%%%%%%%%%%%%%%%%%%%%%% Choice of Parameters %%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Protocol details
 monkeyName = 'alpaH'; expDate = '210817'; protocolName = 'GRF_002';
 % monkeyName = 'alpaH'; expDate = '050817'; protocolName = 'GRF_002';
 % monkeyName = 'kesariH'; expDate = '270218'; protocolName = 'GRF_001';
-removeEvokedResponse=1; tapers = [1 1];analysisPeriodNum=2;
+
+removeEvokedResponse=1; tapers = [1 1];
+
 tuning='SF4Ori90'; %'SF2Ori90' 'SF4Ori90' 'SF' 'Ori' 'Size'
 metrics='pac'; %'others' 'pac' 'pval' 
 correction= 'none'; % 'fdr' 'bonf' 'none'

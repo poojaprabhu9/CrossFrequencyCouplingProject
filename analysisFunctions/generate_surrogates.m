@@ -39,7 +39,6 @@ for n_amp=1:size(sig_amp,2)
     for surr = 1:n_surr
         % Split data
         surr_amp_sig{1,n_amp}(:,surr) = sig_amp{1,n_amp}(:,rand_amp_trial(surr));
-        
     end
 end
 
@@ -47,7 +46,6 @@ for n_ph=1:size(sig_ph,2)
     for surr = 1:n_surr
         % Split data
         surr_ph_sig{1,n_ph}(:,surr) = sig_ph{1,n_ph}(:,rand_phase_trial(surr));
-        
     end
 end
 

@@ -107,7 +107,7 @@ totalSpikes = zeros(1,N);
 changeInFiringRate = zeros(1,N);
 
 for i=1:N
-    disp(i);
+%    disp(i);
     clear spikeData
     x = load(fullfile(folderSpikes,['elec' num2str(electrodesToUse(i)) '_SID' num2str(SourceUnitID(i))]));
     spikeData = x.spikeData;
