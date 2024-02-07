@@ -25,12 +25,9 @@ tapers = [1 1];
 sVarName = 'sf'; sPos = 4; oPos = 9;
 
 % PAC parameters
-metrics = 'pac'; %'others' 'pac' 'pval' 
-correction = 'none'; % 'fdr' 'bonf' 'none'
-pThresh = 0.05; % 0.05,  0.01
-methodVar = 'tort'; %'mi','plv','glm', 'tort','ozkurt'};
-filterMethod ='morlet'; % 'FIR'
-nSurr = 10; % number of surrogates
+pacMethod = 'klmi'; % 'mvl','plv','glm', 'klmi','nmvl';
+filterName = 'wavelet'; % 'wavelet','fir';
+nSurrogates = 10; % Number of surrogates
 useMPFlag = 0;
 
-displayData(monkeyName,expDate,protocolName,removeEvokedResponse,tapers,modality,sVarName,sPos,oPos,methodVar,filterMethod,nSurr,useMPFlag,metrics,correction,pThresh);
+displayData(monkeyName,expDate,protocolName,removeEvokedResponse,tapers,modality,sVarName,sPos,oPos,pacMethod,filterName,nSurrogates,useMPFlag);

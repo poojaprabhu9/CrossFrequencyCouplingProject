@@ -27,9 +27,9 @@ tapers = [1 1];
 sVarName = 'sf'; sPos = 4; oPos = 9;
 
 % Methods used for PAC analysis
-methodVar = 'tort'; % 'mi','plv','glm', 'tort','ozkurt';
-filterMethod = 'morlet'; % 'morlet','FIR';
-nSurr = 10; % number of surrogates
+pacMethod = 'plv'; % 'mvl','plv','glm', 'klmi','nmvl';
+filterName = 'wavelet'; % 'wavelet','fir'
+nSurrogates = 10; % Number of surrogates
 useMPFlag = 0;
 
-saveData(monkeyName,expDate,protocolName,folderSourceString,removeEvokedResponse,tapers,modality,electrodeDistanceVal,sVarName,sPos,oPos,methodVar,filterMethod,nSurr,useMPFlag);
+saveData(monkeyName,expDate,protocolName,folderSourceString,removeEvokedResponse,tapers,modality,electrodeDistanceVal,sVarName,sPos,oPos,pacMethod,filterName,nSurrogates,useMPFlag);

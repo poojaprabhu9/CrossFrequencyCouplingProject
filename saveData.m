@@ -1,7 +1,7 @@
 % Function for saving Field-Field Coherence, Spike Field Coherence and
 % Spike Triggered Average and PAC using different methods
 
-function saveData(monkeyName,expDate,protocolName,folderSourceString,removeEvokedResponse,tapers,modality,electrodeDistanceVal,sVarName,sPos,oPos,methodVar,filterMethod,nSurr,useMPFlag)
+function saveData(monkeyName,expDate,protocolName,folderSourceString,removeEvokedResponse,tapers,modality,electrodeDistanceVal,sVarName,sPos,oPos,pacMethod,filterName,nSurrogates,useMPFlag)
 
 % get good spike eletrodes
 firingThresh = 5;
@@ -31,13 +31,13 @@ switch modality
         lfpElectrodes = goodElectrodes(goodElectrodes<=81);
 end
 
-saveDataEachElectrode(monkeyName,expDate,protocolName,folderSourceString,lfpElectrodes,spikeElectrodes,removeEvokedResponse,tapers,modality,electrodeDistanceVal,sVarName,sPos,oPos,methodVar,filterMethod,nSurr,useMPFlag);
+saveDataEachElectrode(monkeyName,expDate,protocolName,folderSourceString,lfpElectrodes,spikeElectrodes,removeEvokedResponse,tapers,modality,electrodeDistanceVal,sVarName,sPos,oPos,pacMethod,filterName,nSurrogates,useMPFlag);
 end
 
-function saveDataEachElectrode(monkeyName,expDate,protocolName,folderSourceString,lfpElectrodes,spikeElectrodes,removeEvokedResponse,tapers,modality,electrodeDistanceVal,sVarName,sPos,oPos,methodVar,filterMethod,nSurr,useMPFlag)
+function saveDataEachElectrode(monkeyName,expDate,protocolName,folderSourceString,lfpElectrodes,spikeElectrodes,removeEvokedResponse,tapers,modality,electrodeDistanceVal,sVarName,sPos,oPos,pacMethod,filterName,nSurrogates,useMPFlag)
 
 % Selection of LFP electrodes based on choice of electrode distance between
-% LFP and paricular spike electrode
+% LFP and particular spike electrode
 if strcmp(modality,'ECoG')
     electrodeDistanceList{1} = 0;
     electrodeDistanceVal='0';
@@ -66,21 +66,21 @@ analysisPeriodList{2} = [0.25 0.75];
 %%%%%%%%%%%%%%%% Coherence and Coupling across all pairs %%%%%%%%%%%%%%%%%%
 
 % File to save
-fileToSave = fullfile(folderSave,[monkeyName expDate protocolName '_removeMean' num2str(removeEvokedResponse) '_Tapers' num2str(tapers(1)) '_' num2str(tapers(2)) '_' modality '_d' electrodeDistanceVal '_' sVarName num2str(sPos) '_o' num2str(oPos) '_' methodVar '_' filterMethod '_nSur' num2str(nSurr) '_MP' num2str(useMPFlag) '.mat']);
+fileToSave = fullfile(folderSave,[monkeyName expDate protocolName '_removeMean' num2str(removeEvokedResponse) '_Tapers' num2str(tapers(1)) '_' num2str(tapers(2)) '_' modality '_d' electrodeDistanceVal '_' sVarName num2str(sPos) '_o' num2str(oPos) '_' pacMethod '_' filterName '_nSur' num2str(nSurrogates) '_MP' num2str(useMPFlag) '.mat']);
 
 if exist(fileToSave,'file')
     disp([fileToSave ' exists']);
 else
     numElectrodes = length(spikeElectrodes);
 
-    ffc=[]; ffphi=[]; sfc=[]; sfphi=[]; staVals=[]; pacmat=[]; pval=[]; lfpElectrodesToUse=[];
+    ffc=[]; ffphi=[]; sfc=[]; sfphi=[]; staVals=[]; pac=[]; normalisedPac=[]; surrogatePac=[]; tval=[]; pval=[]; lfpElectrodesToUse=[];
     for i=1:numElectrodes
         spikeElectrode = spikeElectrodes(i);
         [electrodesToCombine,~] = getElectrodeDistance(lfpElectrodes,spikeElectrode,electrodeDistanceList);
         lfpElectrodesSet=lfpElectrodes(electrodesToCombine{1});
 
         disp([num2str(i) ' of ' num2str(numElectrodes) ': ' monkeyName expDate protocolName 'elec' num2str(spikeElectrode)]);
-        [ffcTMP,ffphiTMP,sfcTMP,sfphiTMP,ffcFreq,sfcFreq,staValsTMP,xsSTA,pacmatTMP,pvalTMP,freqVecPhase,freqVecAmp] = getDataSingleElectrode(monkeyName,expDate,protocolName,folderSourceString,spikeElectrode,lfpElectrodesSet,analysisPeriodList,removeEvokedResponse,tapers,sVarName,sPos,oPos,methodVar,filterMethod,nSurr,useMPFlag);
+        [ffcTMP,ffphiTMP,sfcTMP,sfphiTMP,ffcFreq,sfcFreq,staValsTMP,xsSTA,pacTMP,normalisedPacTMP,surrogatePacTMP,tvalTMP,pvalTMP,centerAmpFreq,centerPhaseFreq] = getDataSingleElectrode(monkeyName,expDate,protocolName,folderSourceString,spikeElectrode,lfpElectrodesSet,analysisPeriodList,removeEvokedResponse,tapers,sVarName,sPos,oPos,pacMethod,filterName,nSurrogates,useMPFlag);
         
         % Concatenate
         ffc = cat(1,ffc,ffcTMP);
@@ -88,13 +88,16 @@ else
         sfc = cat(1,sfc,sfcTMP);
         sfphi = cat(1,sfphi,sfphiTMP);
         staVals = cat(1,staVals,staValsTMP);
-        pacmat = cat(1,pacmat,pacmatTMP);
+        pac = cat(1,pac,pacTMP);
+        normalisedPac = cat(1,normalisedPac,normalisedPacTMP);
+        surrogatePac = cat(1,surrogatePac,surrogatePacTMP);
+        tval = cat(1,tval,tvalTMP);
         pval = cat(1,pval,pvalTMP);
         lfpElectrodesToUse = cat(2,lfpElectrodesToUse,lfpElectrodesSet);
     end
     % save data
     lfpElectrodes = lfpElectrodesToUse;
-    save(fileToSave,'ffc','ffphi','sfc','sfphi','ffcFreq','sfcFreq','staVals','xsSTA','pacmat','pval','freqVecPhase','freqVecAmp','spikeElectrodes','lfpElectrodes');
+    save(fileToSave,'ffc','ffphi','sfc','sfphi','ffcFreq','sfcFreq','staVals','xsSTA','pac','normalisedPac','surrogatePac','tval','pval','centerAmpFreq','centerPhaseFreq','spikeElectrodes','lfpElectrodes');
 end
 end
 
@@ -123,12 +126,15 @@ for i=1:numCombinations
 end
 end
 
-function [ffc,ffphi,sfc,sfphi,ffcFreq,sfcFreq,staVals,xsSTA,pacmat,pval,freqVecPhase,freqVecAmp] = getDataSingleElectrode(monkeyName,expDate,protocolName,folderSourceString,spikeElectrode,lfpElectrodes,analysisPeriodList,removeEvokedResponse,tapers,sVarName,sPos,oPos,methodVar,filterMethod,nSurr,useMPFlag)
+function [ffc,ffphi,sfc,sfphi,ffcFreq,sfcFreq,staVals,xsSTA,pac,normalisedPac,surrogatePac,tval,pval,centerAmpFreq,centerPhaseFreq] = getDataSingleElectrode(monkeyName,expDate,protocolName,folderSourceString,spikeElectrode,lfpElectrodes,analysisPeriodList,removeEvokedResponse,tapers,sVarName,sPos,oPos,pacMethod,filterName,nSurrogates,useMPFlag)
 
-% PAC analysis
-phaseFreqVec = 2:4:80; % Phase frequencies for PAC
-ampFreqVec = 2:10:200; % amplitude frequencies for PAC
-width = 3; % width of morlet wavelet
+% Parameters for PAC analysis
+phaseFreq = 2:4:80; % Phase frequencies for PAC
+ampFreq = 2:10:200; % amplitude frequencies for PAC
+alpha = 0.05; % confidence interval for ttest (Surrogate v/s raw PAC significance) 
+
+% Parameters for Filtering
+waveletWidth = 7; % width of morlet wavelet
 epochFrames = 0;
 phFiltOrder = 300;
 ampFiltOrder = 300; % values taken from Kramer and Eden, JNM, 2013.
@@ -155,11 +161,11 @@ end
 % LFP timeVals
 tmp = load(fullfile(folderSourceString,'data',monkeyName,gridType,expDate,protocolName,'segmentedData','LFP','lfpInfo.mat'),'timeVals');
 timeVals = tmp.timeVals;
-Fs = round(1/((timeVals(2)-timeVals(1))));
+samplingFreq = round(1/((timeVals(2)-timeVals(1))));
 
 numPeriods = length(analysisPeriodList);
 for i=1:numPeriods
-    xPos{i} = find(timeVals>analysisPeriodList{i}(1),1) + (1:round(Fs*diff(analysisPeriodList{i})));
+    xPos{i} = find(timeVals>analysisPeriodList{i}(1),1) + (1:round(samplingFreq*diff(analysisPeriodList{i})));
 end
 
 %%%%%%%%%%%%%% Get spike and LFP data from the spike electrode %%%%%%%%%%%%
@@ -180,7 +186,7 @@ numLFPElectrodes = length(lfpElectrodes);
 % Set up multitaper
 params.tapers   = tapers;
 params.pad      = -1;
-params.Fs       = Fs;
+params.Fs       = samplingFreq;
 params.fpass    = [0 250];
 params.trialave = 1;
 
@@ -194,7 +200,7 @@ for i=1:numLFPElectrodes
 
     for p=1:numPeriods
 
-        spkb = convertSpikeTimes2Bins(spikeData(goodPos),analysisPeriodList{p},1000/Fs);
+        spkb = convertSpikeTimes2Bins(spikeData(goodPos),analysisPeriodList{p},1000/samplingFreq);
         lfpSpike = analogDataSpike(goodPos,xPos{p});
         lfp = analogData(goodPos,xPos{p});
 
@@ -211,9 +217,11 @@ for i=1:numLFPElectrodes
         [staTMP,~,xsSTA] = getSTA(spikeData(goodPos),analogData(goodPos,:),analysisPeriodList{p},timeVals,[-0.1 0.1],1);
         staVals(i,p,:) = staTMP{1};
 
-        % phase-amplitude coupling
-        [pacmat(i,p,:,:), pval(i,p,:,:),freqVecPhase,freqVecAmp] = getPAC(lfpSpike',Fs,filterMethod,methodVar, ...
-                lfp',phaseFreqVec,ampFreqVec,width,nSurr,epochFrames,phFiltOrder,ampFiltOrder);
+        % phase-amplitude coupling 
+        useFlagShufflePhase = 1;
+        [pac(i,p,:,:), normalisedPac(i,p,:,:), surrogatePac(i,p,:,:,:), tval(i,p,:,:), pval(i,p,:,:), centerAmpFreq, centerPhaseFreq] = getPAC (lfpSpike', ampFreq, lfp', phaseFreq, samplingFreq, filterName, epochFrames, phFiltOrder, ...
+                                    ampFiltOrder, waveletWidth, pacMethod, nSurrogates, useFlagShufflePhase, alpha);
+
     end
 end
 end
