@@ -1,55 +1,42 @@
-clear all; close all;
-% Matching pursuit on the electrodes
-addpath(genpath('E:\Monkey\MATLAB\Repositories\CommonPrograms-master'))
-addpath(genpath('E:\Monkey\MATLAB\Repositories\chronux_2_12'));
-addpath(genpath('E:\Monkey\MATLAB\CrossFrequencyCouplingProject\ForToolbox\MP-master'));
+folderSourceString = fileparts(pwd); % folder in which programs and data for this project are kept. This line works only if 'pwd' returns the programs folder. Otherwise, simply specify this string, e.g. 'E:\Monkey\MATLAB\CrossFrequencyCouplingProject\';
+gridType = 'Microelectrode';
 
-elecNum=90;
-folderSourceString = 'E:\Monkey\MATLAB\CrossFrequencyCouplingProject\';
-% monkeyName = 'alpaH'; expDate = '210817'; protocolName = 'GRF_002'; gridType='Microelectrode';
-% monkeyName = 'kesariH'; expDate = '270218'; protocolName = 'GRF_001'; gridType='Microelectrode';
-monkeyName = 'alpaH'; expDate = '050817'; protocolName = 'GRF_002'; gridType='Microelectrode';
+%%%%%%%%%%%%%%%%%%%%%%%%%% Choice of parameters %%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Protocol details
+monkeyName = 'alpaH'; expDate = '210817'; protocolName = 'GRF_002';
+% monkeyName = 'alpaH'; expDate = '050817'; protocolName = 'GRF_002';
+% monkeyName = 'kesariH'; expDate = '270218'; protocolName = 'GRF_001';
 
-for e=1:elecNum
-        tmp = load(fullfile(folderSourceString,'data',monkeyName,gridType,expDate,protocolName,'segmentedData','LFP',['elec' num2str(e) '.mat']),'analogData');
-        analogData = tmp.analogData;
+rfData = load([monkeyName 'MicroelectrodeRFData.mat']); % selecting good electrodes as per RMS values from Dubey and Ray, Sci Rep, 2020
+goodElectrodes = rfData.highRMSElectrodes;
 
-        inputSignal=analogData(1,:);
-        folderName = '../MPalpaHSize/'; 
-        tag = sprintf('elec%d/',e);
-        
-        % Import the data
-        X(:,:,1) = inputSignal';
-        L=size(X,1);
-        signalRange = [1 L]; % full range
-        Fs=2000;
-        importData(X,folderName,tag,signalRange,Fs);
-        
-        % perform Gabor decomposition
-        Numb_points = L; % length of the signal
-        Max_iterations = 100; % number of iterations
-        runGabor(folderName,tag,Numb_points, Max_iterations);
-        
-        trialNum=size(X,2); % plot Trial number
-        rSignal=zeros(size(analogData,1),size(analogData,2));
-        for i=1:trialNum
-        
-            gaborInfo{1} = getGaborData(folderName,tag,1);
-            
-            
-            % Reconstruct signal
-            wrap=1;
-            atomList=[]; % all atoms
-            
-            if isempty(atomList)
-                disp(['Reconstructing trial ' num2str(i) ', all atoms']);
-            else
-                disp(['Reconstructing trial ' num2str(i) ', atoms ' num2str(atomList(1)) ':' num2str(atomList(end))]);
-            end
-            
-            rSignal(i,:) = reconstructSignalFromAtomsMPP(gaborInfo{1}{trialNum}.gaborData,L,wrap,atomList);
-        end
-        filetoSave=fullfile(folderName,tag,['elec' num2str(e) '.mat']);
-        save(filetoSave,"rSignal");
-        clear gaborInfo
+numElectrodes = length(goodElectrodes);
+
+folderName = fullfile(folderSourceString,'data',monkeyName,gridType,expDate,protocolName);
+folderNameMP = fullfile('../data',monkeyName,gridType,expDate,protocolName,'mpAnalysis'); % The path must be relative when using Windows (i.e., should not start with c: etc. So this part only works when we are in the programs folder)
+makeDirectory(folderNameMP);
+
+tmp = load(fullfile(folderName,'segmentedData','LFP','lfpInfo.mat'),'timeVals');
+timeVals = tmp.timeVals;
+Fs = round(1/((timeVals(2)-timeVals(1))));
+
+Max_iterations = 500; % number of iterations
+
+for i=1:numElectrodes
+    eNum = goodElectrodes(i);
+
+    tmp = load(fullfile(folderName,'segmentedData','LFP',['elec' num2str(eNum) '.mat']),'analogData');
+    inputSignal = tmp.analogData;
+
+    tag = sprintf('elec%d/',eNum);
+
+    % Import the data
+    X(:,:,1) = inputSignal';
+    L = size(X,1);
+    signalRange = [1 L]; % full range
+    importData(X,folderNameMP,tag,signalRange,Fs);
+
+    % perform Gabor decomposition
+    Numb_points = L; % length of the signal
+    runGabor(folderNameMP,tag,Numb_points,Max_iterations);
 end
