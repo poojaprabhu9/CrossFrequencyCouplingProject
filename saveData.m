@@ -162,6 +162,7 @@ end
 tmp = load(fullfile(folderSourceString,'data',monkeyName,gridType,expDate,protocolName,'segmentedData','LFP','lfpInfo.mat'),'timeVals');
 timeVals = tmp.timeVals;
 samplingFreq = round(1/((timeVals(2)-timeVals(1))));
+signalLength = length(timeVals);
 
 numPeriods = length(analysisPeriodList);
 for i=1:numPeriods
@@ -175,6 +176,7 @@ tmp = load(fullfile(folderSourceString,'data',monkeyName,gridType,expDate,protoc
 spikeData = tmp.spikeData;
 
 if useMPFlag
+    analogDataSpike = getMPSignal(monkeyName,gridType,expDate,protocolName,folderSourceString,spikeElectrode,signalLength);
 else
     % Get LFP data from the spike electrode
     tmp = load(fullfile(folderSourceString,'data',monkeyName,gridType,expDate,protocolName,'segmentedData','LFP',['elec' num2str(spikeElectrode) '.mat']),'analogData');
@@ -228,4 +230,20 @@ end
 
 function y=removeMeanResponse(analogData)
 y = analogData-repmat(mean(analogData),size(analogData,1),1);
+end
+
+function analogData = getMPSignal(monkeyName,gridType,expDate,protocolName,folderSourceString,eNum,signalLength)
+
+folderName = fullfile(folderSourceString,'data',monkeyName,gridType,expDate,protocolName,'mpAnalysis');
+tag = sprintf('elec%d/',eNum);
+gaborInfo = getGaborData(folderName,tag,1);
+numTrials = length(gaborInfo);
+
+analogData = zeros(numTrials,signalLength);
+
+for i=1:length(gaborInfo)
+    gaborData = gaborInfo{i}.gaborData;
+    gaborData(:,(gaborData(2,:)==0)) = []; % Remove atoms with zero frequency
+    analogData(i,:) = reconstructSignalFromAtomsMPP(gaborData,signalLength,1);
+end
 end
