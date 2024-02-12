@@ -1,66 +1,51 @@
-function [pacmat, pval, freqvec_ph, freqvec_amp] = getPAC (sig_amp, Fs, filterName, measure, ...
-    sig_ph, ph_freq_vec, amp_freq_vec, width, n_surr, epochframes, phFiltorder,ampFiltorder)
-
-% This function calculates a matrix of PAC values using either the  MVLMI, PLV, GLM, KLMI and normalised MVLMI
-
-% It uses shuffled datasets to conduct a significance analysis of the PAC
-% values found
-%
-% Basic function call:
-% pacmat = getPACallMeasures(sig_pac, Fs, measure)
-%
-% REQUIRED INPUTS:
-%  sig_pac - signal suspected of containing PAC
-%  Fs - sampling frequency
-%  measure - measure to be used - it should be:  'mi', 'plv', 'glm', 'tort' or 'ozkurt'
-
-% OPTIONAL INPUTS:
-%  sig_mod - signal containing modulating frequency; default = sig_pac
-%  ph_freq_vec - range of frequencies for modulating signal
-%  amp_freq_vec - range of frequencies for PAC signal
-%  width - width of the wavelet filter; default = 7
-%  nfft - the number of points in fft; default = 200
-%  num_surr - the number of surrogate data sets to use during significance
-
-if (size(sig_amp,2) ~= size(sig_ph,2))
-    sprintf('Error - Signals must have the same number of trials')
-    return
-end
+function [rawPac, normalisedPac, shuffledPac, tval, pval, centerAmpFreq, centerPhaseFreq] = getPAC (amp, ampFreq, phase, phaseFreq, samplingFreq, filterName, epochFrames, phFiltOrder, ...
+                                    ampFiltOrder, waveletWidth, pacMethod, nSurrogates, alpha)
 
 % Get number of bins as per phase frequencies and amplitude frequencies
-xbins = ceil((max(ph_freq_vec) - min(ph_freq_vec))/(diff(ph_freq_vec(1:2))));
-ybins = ceil((max(amp_freq_vec) - min(amp_freq_vec))/(diff(amp_freq_vec(1:2))));
+phaseBins = ceil((max(phaseFreq) - min(phaseFreq))/(diff(phaseFreq(1:2))));
+ampBins = ceil((max(ampFreq) - min(ampFreq))/(diff(ampFreq(1:2))));
 
 % Get the Phase and amplitude time series based on Filtering methods
-if (strcmp(filterName, 'morlet'))
-    [filt_sig_amp, filt_sig_ph] = filt_signalsWAV(sig_amp, sig_ph, Fs, ...
-        ph_freq_vec, amp_freq_vec, measure, width);
-elseif (strcmp(filterName, 'FIR'))
-    [filt_sig_amp, filt_sig_ph] = filt_signalsFIR(sig_amp, sig_ph, Fs, ...
-        ph_freq_vec, amp_freq_vec, epochframes,phFiltorder,ampFiltorder);
-elseif (strcmp(filterName, 'MP'))
-    [filt_sig_amp, filt_sig_ph] = filt_signalsFIR(sig_amp, sig_ph, Fs, ph_freq_vec, amp_freq_vec, epochframes,phFiltorder,ampFiltorder);
+if (strcmp(filterName, 'wavelet'))
+    [filteredAmp, filteredPhase] = filterWavelet(amp, ampFreq, phase, phaseFreq, samplingFreq, waveletWidth);
+elseif (strcmp(filterName, 'fir') || strcmp(filterName, 'mp'))
+    [filteredAmp, filteredPhase] = filterFir(amp, ampFreq, phase, phaseFreq, samplingFreq, epochFrames, phFiltOrder, ampFiltOrder);
 end
 
-% Generate surrogates by shuffling the trial numbers
-if n_surr ~= 0
-    [surr_sig_amp, surr_sig_ph] = generate_surrogates(filt_sig_amp, filt_sig_ph,  n_surr) ;
+% Generate surrogates by shuffling the signals
+if nSurrogates ~= 0
+    [shuffledAmp, shuffledPhase] = generateSurrogates (filteredAmp, filteredPhase, nSurrogates);
 
-    % PAC measures on surrogate data
-    [surr_pacmat, surr_pacmatFull, freqvec_ph, freqvec_amp] = getPACallMeasures(surr_sig_amp, Fs, measure, surr_sig_ph, ph_freq_vec, amp_freq_vec);
+    % PAC on shuffled signals
+    [~, shuffledPac, ~, ~] = getPACallMethods (shuffledAmp, ampFreq, shuffledPhase, phaseFreq, pacMethod, nSurrogates);
+    disp('End of surrogate analysis');
 end
 
 % Different PAC measures on filetered data
-[pacmat, pacmatFull, freqvec_ph, freqvec_amp] = getPACallMeasures(filt_sig_amp, Fs, measure, filt_sig_ph, ph_freq_vec, amp_freq_vec);
+[rawPac, ~, centerAmpFreq, centerPhaseFreq] = getPACallMethods (filteredAmp, ampFreq, filteredPhase, phaseFreq, pacMethod, nSurrogates);
 
-% permutation test between surrogate and raw  pac values
-nperm=1000; %number of permutation
-for i =1:size(pacmatFull,2)
-    for j=1:size(pacmatFull,3)
-        x=pacmatFull(:,i,j);
-        y=surr_pacmatFull(:,i,j);
-        [meandiff,Prob,meandiffs] = permTest_mean(x,y,nperm);
-        pval(i,j)=Prob;     % Compute p_value
+%%%%%%%%% Statistical Analysis between Surrogate and Raw PAC values %%%%%%%%%%%%%%
+
+pval = zeros(ampBins, phaseBins); % array for probaility values
+tval = zeros(ampBins, phaseBins); % array for t- values
+normalisedPac = zeros(ampBins, phaseBins);
+
+% Compute pvalue by estimating a normal distribution from the surrogate data
+for nAmpBin = 1:ampBins
+    parfor nPhaseBin = 1:phaseBins
+        [surrogateMean, surrogateStd] = normfit(squeeze(shuffledPac(nPhaseBin, nAmpBin, :))); % Estimating a normal distribution
+        normalisedPac(nAmpBin, nPhaseBin) = (rawPac(nPhaseBin, nAmpBin) - surrogateMean) / surrogateStd; % Normalize the pacval (z-score)
+%         pval(nAmpBin, nPhaseBin) = 1-normcdf(abs(normalisedPac(nAmpBin, nPhaseBin)));  % Compute p_value
     end
 end
+
+% Compute pvalue using ttest (Surrogate as null distribution)
+for nAmpBin = 1:ampBins
+    parfor nPhaseBin = 1:phaseBins
+        [~, p, ~, stats] = ttest2 (shuffledPac(nPhaseBin, nAmpBin, :), rawPac(nPhaseBin, nAmpBin, :), 'Tail', 'both', 'Alpha', alpha, 'Vartype', 'equal');
+        tval(nAmpBin, nPhaseBin) = stats.tstat;
+        pval(nAmpBin, nPhaseBin) = p;    
+    end
+end
+disp('End of statistical analysis');
 end
