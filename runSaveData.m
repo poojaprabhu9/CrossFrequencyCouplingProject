@@ -27,8 +27,8 @@ tapers = [1 1];
 sVarName = 'sf'; sPos = 4; oPos = 9;
 
 % Methods used for PAC analysis
-pacMethod = 'plv'; % 'mvl','plv','glm', 'klmi','nmvl';
-filterName = 'wavelet'; % 'wavelet','fir'
+pacMethod = 'klmi'; % 'mvl','plv','glm', 'klmi','nmvl';
+filterName = 'fir'; % 'wavelet','fir';
 nSurrogates = 10; % Number of surrogates
 useMPFlag = 1;
 
