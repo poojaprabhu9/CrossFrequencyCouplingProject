@@ -26,8 +26,9 @@ sVarName = 'sf'; sPos = 4; oPos = 9;
 
 % PAC parameters
 pacMethod = 'klmi'; % 'mvl','plv','glm', 'klmi','nmvl';
-filterName = 'wavelet'; % 'wavelet','fir';
+filterName = 'fir'; % 'wavelet','fir';
 nSurrogates = 10; % Number of surrogates
 useMPFlag = 0;
+useCorrectionFlag=0;
 
-displayData(monkeyName,expDate,protocolName,removeEvokedResponse,tapers,modality,sVarName,sPos,oPos,pacMethod,filterName,nSurrogates,useMPFlag);
+displayData(monkeyName,expDate,protocolName,removeEvokedResponse,tapers,modality,sVarName,sPos,oPos,pacMethod,filterName,nSurrogates,useMPFlag, useCorrectionFlag);
