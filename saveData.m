@@ -137,7 +137,7 @@ alpha = 0.05; % confidence interval for ttest (Surrogate v/s raw PAC significanc
 waveletWidth = 7; % width of morlet wavelet
 epochFrames = 0;
 phFiltOrder = 300;
-ampFiltOrder = 300; % values taken from Kramer and Eden, JNM, 2013.
+ampFiltOrder = 50; % values taken from Kramer and Eden, JNM, 2013.
 
 gridType='Microelectrode';
 % Get parameter combinations
@@ -162,7 +162,6 @@ end
 tmp = load(fullfile(folderSourceString,'data',monkeyName,gridType,expDate,protocolName,'segmentedData','LFP','lfpInfo.mat'),'timeVals');
 timeVals = tmp.timeVals;
 samplingFreq = round(1/((timeVals(2)-timeVals(1))));
-signalLength = length(timeVals);
 
 numPeriods = length(analysisPeriodList);
 for i=1:numPeriods
@@ -176,7 +175,9 @@ tmp = load(fullfile(folderSourceString,'data',monkeyName,gridType,expDate,protoc
 spikeData = tmp.spikeData;
 
 if useMPFlag
-    analogDataSpike = getMPSignal(monkeyName,gridType,expDate,protocolName,folderSourceString,spikeElectrode,signalLength);
+    % Get LFP data from the spike electrode
+    tmp = load(fullfile(folderSourceString,'data',monkeyName,gridType,expDate,protocolName,'segmentedData','lfpMP',['elec' num2str(spikeElectrode) '.mat']),'analogData');
+    analogDataSpike=tmp.analogData;
 else
     % Get LFP data from the spike electrode
     tmp = load(fullfile(folderSourceString,'data',monkeyName,gridType,expDate,protocolName,'segmentedData','LFP',['elec' num2str(spikeElectrode) '.mat']),'analogData');
@@ -195,6 +196,8 @@ params.trialave = 1;
 for i=1:numLFPElectrodes
 
     if useMPFlag
+        tmp = load(fullfile(folderSourceString,'data',monkeyName,gridType,expDate,protocolName,'segmentedData','lfpMP',['elec' num2str(lfpElectrodes(i)) '.mat']),'analogData');
+        analogData = tmp.analogData;
     else
         tmp = load(fullfile(folderSourceString,'data',monkeyName,gridType,expDate,protocolName,'segmentedData','LFP',['elec' num2str(lfpElectrodes(i)) '.mat']),'analogData');
         analogData = tmp.analogData;
@@ -220,9 +223,8 @@ for i=1:numLFPElectrodes
         staVals(i,p,:) = staTMP{1};
 
         % phase-amplitude coupling 
-        useFlagShufflePhase = 1;
-        [pac(i,p,:,:), normalisedPac(i,p,:,:), surrogatePac(i,p,:,:,:), tval(i,p,:,:), pval(i,p,:,:), centerAmpFreq, centerPhaseFreq] = getPAC (lfpSpike', ampFreq, lfp', phaseFreq, samplingFreq, filterName, epochFrames, phFiltOrder, ...
-                                    ampFiltOrder, waveletWidth, pacMethod, nSurrogates, useFlagShufflePhase, alpha);
+        [pac(i,p,:,:),normalisedPac(i,p,:,:),surrogatePac(i,p,:,:,:),tval(i,p,:,:),pval(i,p,:,:),centerAmpFreq,centerPhaseFreq] = getPAC (lfpSpike',ampFreq,lfp',phaseFreq,samplingFreq,filterName,epochFrames,phFiltOrder, ...
+                                    ampFiltOrder,waveletWidth,pacMethod,nSurrogates,alpha);
 
     end
 end
@@ -230,20 +232,4 @@ end
 
 function y=removeMeanResponse(analogData)
 y = analogData-repmat(mean(analogData),size(analogData,1),1);
-end
-
-function analogData = getMPSignal(monkeyName,gridType,expDate,protocolName,folderSourceString,eNum,signalLength)
-
-folderName = fullfile(folderSourceString,'data',monkeyName,gridType,expDate,protocolName,'mpAnalysis');
-tag = sprintf('elec%d/',eNum);
-gaborInfo = getGaborData(folderName,tag,1);
-numTrials = length(gaborInfo);
-
-analogData = zeros(numTrials,signalLength);
-
-for i=1:length(gaborInfo)
-    gaborData = gaborInfo{i}.gaborData;
-    gaborData(:,(gaborData(2,:)==0)) = []; % Remove atoms with zero frequency
-    analogData(i,:) = reconstructSignalFromAtomsMPP(gaborData,signalLength,1);
-end
 end
