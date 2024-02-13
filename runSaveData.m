@@ -30,6 +30,6 @@ sVarName = 'sf'; sPos = 4; oPos = 9;
 pacMethod = 'klmi'; % 'mvl','plv','glm', 'klmi','nmvl';
 filterName = 'fir'; % 'wavelet','fir';
 nSurrogates = 10; % Number of surrogates
-useMPFlag = 1;
+useMPFlag = 0;
 
 saveData(monkeyName,expDate,protocolName,folderSourceString,removeEvokedResponse,tapers,modality,electrodeDistanceVal,sVarName,sPos,oPos,pacMethod,filterName,nSurrogates,useMPFlag);
