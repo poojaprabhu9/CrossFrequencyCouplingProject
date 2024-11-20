@@ -1,11 +1,11 @@
-function [filteredAmp, filteredPhase] = filterWavelet(amp, ampFreq, phase, phaseFreq, samplingFreq, waveletWidth)
+function [filteredAmp, filteredPhase] = filterWavelet(amp, ampFreq, phase, phaseFreq, samplingFreq, timeWin)
 
 % Get number of bins as per phase frequencies and amplitude frequencies
 phaseBins = ceil((max(phaseFreq) - min(phaseFreq))/(diff(phaseFreq(1:2))));
 ampBins = ceil((max(ampFreq) - min(ampFreq))/(diff(ampFreq(1:2))));
 
 % Details of data
-numTimes = size(amp,1);
+numTimes = length(timeWin);
 numTrials = size(amp,2);
 
 % Frequency limits 
@@ -27,6 +27,8 @@ filteredAmp = cell(1,ampBins);
 % end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%% Filtering %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Parameters for Filtering
+waveletWidth = 7; % width of morlet wavelet
 
 % Filter amplitude signals at different amplitude frequencies
 tmpFilteredSig = zeros(numTimes, numTrials);
@@ -34,7 +36,8 @@ for nAmpBin = 1:ampBins
     upperBinFreq = ampFreqLimits(1) + (nAmpBin * ampFreqBandwidth);
     lowerBinFreq = upperBinFreq - ampFreqBandwidth;     
     for nTrials = 1:numTrials
-            tmpFilteredSig(:,nTrials) = ampvec((lowerBinFreq + floor((upperBinFreq - lowerBinFreq)/2)), amp(:, nTrials), samplingFreq, waveletWidth);
+            tmpFilteredSigAll = ampvec((lowerBinFreq + floor((upperBinFreq - lowerBinFreq)/2)), amp(:, nTrials), samplingFreq, waveletWidth);
+            tmpFilteredSig(:,nTrials) = tmpFilteredSigAll(:, timeWin);
     end    
     filteredAmp{1,nAmpBin} = tmpFilteredSig(:); % Conatenated trials per each amplitude bin  
 end
@@ -45,7 +48,8 @@ for nPhaseBin = 1:phaseBins
     upperBinFreq = phaseFreqLimits(1) + (nPhaseBin * phaseFreqBandwidth);
     lowerBinFreq = upperBinFreq - phaseFreqBandwidth;     
     for nTrials = 1:numTrials
-            tmpFilteredSig(:,nTrials) = phasevec((lowerBinFreq + floor((upperBinFreq - lowerBinFreq)/2)), phase(:, nTrials), samplingFreq, waveletWidth);
+            tmpFilteredSigAll = phasevec((lowerBinFreq + floor((upperBinFreq - lowerBinFreq)/2)), phase(:, nTrials), samplingFreq, waveletWidth);
+            tmpFilteredSig(:,nTrials) = tmpFilteredSigAll(:, timeWin);
     end    
     filteredPhase{1,nPhaseBin} = tmpFilteredSig(:); % Concatenated trials per each phase bin 
 end

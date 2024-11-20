@@ -1,4 +1,4 @@
-function [rawPac, shuffledPac, centerAmpFreq, centerPhaseFreq] = getPACallMethods (amp, ampFreq, phase, phaseFreq, pacMethod, nSurrogates)
+function [rawPac, anglePac, shuffledPac, meanAmp, centerAmpFreq, centerPhaseFreq] = getPACallMethods (amp, ampFreq, phase, phaseFreq, pacMethod, nSurrogates)
                                                          
 % Number of bins as per given phase and amplitude frequencies
 phaseBins = ceil((max(phaseFreq) - min(phaseFreq))/(diff(phaseFreq(1:2))));
@@ -22,11 +22,15 @@ end
 
 % initialising the output variables
 rawPac = zeros(ampBins, phaseBins);
+anglePac = zeros(ampBins, phaseBins);
 shuffledPac = zeros(ampBins, phaseBins, nSurrogates);
+% only for klmi
+nBins = 18;
+meanAmp = zeros(ampBins, phaseBins,nBins);
 
 % Calculate PAC using different methods
 for nAmpBin = 1:ampBins
-    parfor nPhaseBin = 1:phaseBins
+    for nPhaseBin = 1:phaseBins
          switch pacMethod
              case 'mvl'
                    [rawPac(nAmpBin, nPhaseBin), shuffledPac(nAmpBin, nPhaseBin, :)] = methodMVL (amp{1, nAmpBin}, phase{1, nPhaseBin});
@@ -36,7 +40,7 @@ for nAmpBin = 1:ampBins
                    [rawPac(nAmpBin, nPhaseBin), shuffledPac(nAmpBin, nPhaseBin, :)] = methodGLM (amp{1, nAmpBin}, phase{1, nPhaseBin});
              case 'klmi'
                    nBins = 18;  
-                   [rawPac(nAmpBin, nPhaseBin), shuffledPac(nAmpBin, nPhaseBin, :)] = methodKLMI (amp{1, nAmpBin}, phase{1, nPhaseBin}, nBins);
+                   [rawPac(nAmpBin, nPhaseBin), anglePac(nAmpBin, nPhaseBin), shuffledPac(nAmpBin, nPhaseBin, :), meanAmp(nAmpBin, nPhaseBin, :)] = methodKLMI (amp{1, nAmpBin}, phase{1, nPhaseBin}, nBins);
              case 'nmvl'
                    [rawPac(nAmpBin, nPhaseBin), shuffledPac(nAmpBin, nPhaseBin, :)] = methodnMVL (amp{1, nAmpBin}, phase{1, nPhaseBin});
          end

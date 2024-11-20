@@ -14,7 +14,7 @@
 % stimulusPeriod: duration over which firing rate is calculated. Default:[0.25 0.75]
 % baselinePeriod: duration over which firing rate is calculated. Default:[-0.5 0]
 
-function [goodSpikeElectrodes,electrodesToUse,firingRate,snr,totalSpikes] = getGoodSpikeElectrodes(subjectName,expDate,protocolName,folderSourceString,cutoffs,badTrialNameStr,electrodesToUse,parameterCombinationVals,stimulusPeriod,baselinePeriod)
+function [goodSpikeElectrodes,goodSpikeUnitsElectrodes,goodSpikeUnitsSourceID,electrodesToUse,firingRate,snr,totalSpikes] = getGoodSpikeElectrodes(subjectName,expDate,protocolName,folderSourceString,cutoffs,badTrialNameStr,electrodesToUse,parameterCombinationVals,stimulusPeriod,baselinePeriod)
 
 if ~exist('folderSourceString','var');  folderSourceString='N:';        end
 if ~exist('cutoffs','var');             cutoffs=[];                     end
@@ -35,7 +35,7 @@ folderName = fullfile(folderSourceString,'data',subjectName,gridType,expDate,pro
 % Get folders
 folderExtract = fullfile(folderName,'extractedData');
 folderSegment = fullfile(folderName,'segmentedData');
-folderSpikes = fullfile(folderSegment,'Spikes');
+folderSpikes = fullfile(folderSegment,'sortedSpikes');
 
 %%%%%%%%%%%%%%%%% Get information about electrodes %%%%%%%%%%%%%%%%%%%%%%%%
 if isempty(electrodesToUse)
@@ -68,10 +68,23 @@ else
 end
 
 electrodesToUse = setdiff(electrodesToUse,badElecs);
-
 [neuralChannelsStored,SourceUnitID] = loadSpikeInfo(folderSpikes);
-[electrodesToUse,~,iPos] = intersect(electrodesToUse,neuralChannelsStored);
-SourceUnitID = SourceUnitID(iPos);
+nSourceUnitID = unique(SourceUnitID);
+% for unsorted spikes or sorted spikes with single unit (and 255)
+if (length(nSourceUnitID) == 1) || (length(nSourceUnitID) == 2) 
+    [electrodesToUse,~,iPos] = intersect(electrodesToUse,neuralChannelsStored);
+    SourceUnitID = SourceUnitID(iPos);
+elseif length(nSourceUnitID) >= 3 % for sorted spikes with two units (1, 2 and 255)
+    SourceUnitIDList = cell(1,length(nSourceUnitID));
+    electrodesToUseList = cell(1,length(nSourceUnitID));
+    for nID = 1:length(nSourceUnitID)-1
+        [electrodesToUse,~,~] = intersect(electrodesToUse,neuralChannelsStored(SourceUnitID==nSourceUnitID(nID)));
+        SourceUnitIDList{nID} = nSourceUnitID(nID) * ones(1, length(electrodesToUse)) ;
+        electrodesToUseList{nID} = electrodesToUse;
+    end
+    SourceUnitID = cell2mat(SourceUnitIDList);
+    electrodesToUse = cell2mat(electrodesToUseList);
+end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -107,7 +120,7 @@ totalSpikes = zeros(1,N);
 changeInFiringRate = zeros(1,N);
 
 for i=1:N
-%    disp(i);
+%     disp(i);
     clear spikeData
     x = load(fullfile(folderSpikes,['elec' num2str(electrodesToUse(i)) '_SID' num2str(SourceUnitID(i))]));
     spikeData = x.spikeData;
@@ -116,14 +129,25 @@ for i=1:N
     totalSpikes(i) = sum(H);
     firingRate(i) = mean(H)/diff(stimulusPeriod);
     changeInFiringRate(i) = abs(firingRate(i) - mean(HBL)/diff(baselinePeriod));
-
     clear segmentData
-    x = load(fullfile(folderSegment,'Segments',['elec' num2str(electrodesToUse(i))]));
-    segmentData = x.segmentData;
-    snr(i) = getSNR(segmentData);
+    x = load(fullfile(folderSegment,'sortedSegments',['elec' num2str(electrodesToUse(i))]));
+    if (length(nSourceUnitID) == 1) %unsorted
+        segmentData = x.segmentData;
+        snr(i) = getSNR(segmentData);
+    else 
+        goodUnitID = find(x.unitID==SourceUnitID(i));
+        segmentData = x.segmentData(:,goodUnitID);
+        snr(i) = getSNR(segmentData);
+    end
 end
 
-goodSpikeElectrodes = electrodesToUse((firingRate>=cutoffs(1)) & (snr>=cutoffs(2)) & (totalSpikes>=cutoffs(3)) & (changeInFiringRate>=cutoffs(4)));
+goodSpikeUnitsElectrodes = electrodesToUse((firingRate>=cutoffs(1)) & (snr>=cutoffs(2)) & (totalSpikes>=cutoffs(3)) & (changeInFiringRate>=cutoffs(4)));
+goodSpikeUnitsSourceID = SourceUnitID((firingRate>=cutoffs(1)) & (snr>=cutoffs(2)) & (totalSpikes>=cutoffs(3)) & (changeInFiringRate>=cutoffs(4))==1);
+goodSpikeElectrodes = unique(goodSpikeUnitsElectrodes);
+
+% stem(firingRate); hold on; yline(2,'-','FR=2');hold on; yline(5,'--','FR=5')
+% stem(snr); hold on; yline(1.5,'-','SNR=1.5');
+
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

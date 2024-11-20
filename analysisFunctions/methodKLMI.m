@@ -1,4 +1,5 @@
-function [rawKLMI, shuffledKLMI] = methodKLMI (amp, phase, nBins)
+
+function [rawKLMI,angleKLMI,shuffledKLMI, meanAmp] = methodKLMI (amp, phase, nBins)
 % Kullback–Leibler Modulation Index, Tort et PLVal., 2008 and 2010
 
 % this variable will get the beginning (not the center) of each phase bin (in rads)
@@ -20,6 +21,11 @@ if nSurrogates ==1  % KLMI for filtered raw signal with one time series
     end      
     % Quantifying the amount of amp modulation using normalized entropy index (Tort et al PNAS 2008)    
     rawKLMI = (log(nBins) - (-sum((meanAmp/sum(meanAmp)) .* log((meanAmp/sum(meanAmp)))))) / log(nBins);
+
+    % peakangle
+    normMeanAmp = meanAmp/(sum(meanAmp)); % normalise
+    [~, idx] = max(normMeanAmp);
+    angleKLMI = idx*winsize - (winsize/2);
     shuffledKLMI = 0;
 else % KLMI for filtered shuffled signal with nSurrogates
     shuffledKLMI = zeros(1, nSurrogates);
@@ -33,6 +39,11 @@ else % KLMI for filtered shuffled signal with nSurrogates
         end 
         % Quantifying the amount of amp modulation using normalized entropy index (Tort et al PNAS 2008)    
         shuffledKLMI(1, nSurr) = (log(nBins) - (-sum((meanAmp/sum(meanAmp)) .* log((meanAmp/sum(meanAmp))))))/log(nBins);
+
+         % peakangle
+        normMeanAmp = meanAmp/(sum(meanAmp)); % normalise
+        [~, idx] = max(normMeanAmp);
+        shuffledAngleKLMI(1, nSurr) = idx*winsize - (winsize/2);
     end
     rawKLMI = 0;  
 end
